@@ -1,0 +1,17 @@
+{
+  "checkpoints/gat_best.pt": "c4d148f95df74a1fcebac98170ed4d388c4332bc6593c0c0cccf9dd1f187ba5a",
+  "checkpoints/gcn_best.pt": "b254cf3e5f247481351321c3a505c51a7746955f18fdffef1588e56859eaaf48",
+  "checkpoints/graphsage_best.pt": "c6ec8e7470e776554faa169593a2d578638f89b0b6fe4b7ca2181fb548c88be2",
+  "checkpoints/toxgraph_best.pt": "b74aef41320c79c9715503f26e4feb283120ceb4927b452e736bcaf402c80d84",
+  "checkpoints/toxgraph_bottleneck_best.pt": "f9f41cf826084d2ab1f70f232d509a2f0dc26b9df6d8828169ed7c1c52e4ec4f",
+  "checkpoints/toxgraph_lite_best.pt": "195cb03e8d25052372e95a683ebb17e879590a594529c7dfbc6ad4c9cf892c12",
+  "results/gat_results.json": "c3243dc8029a2ade40370dc547d2ee0594101265a70d06b6140d9bdf87b0cde2",
+  "results/gcn_results.json": "22c9a26a3c1f457091b93e911922904b6ece70866fdaa0ff56a973e91cd4ed8e",
+  "results/graphsage_results.json": "882cde1b374cf8a3c6e420403d3a6999ae1227aabeb9570b5c42f8c35f08c70b",
+  "results/toxgraph_bottleneck_results.json": "14d55d4d42f686d893f22e5e81b9119c8a470ae16ef4860717e06d7705d98c8c",
+  "results/toxgraph_lite_results.json": "c9820865d506d10842ef33000283c9b683366211986f3a8e9e3ade8f320c8a5a",
+  "results/toxgraph_results.json": "f44f62362abdf90e72b1fa0a13032f51ef5d3e4eae35388ef938171fd2d762c6",
+  "results/final/test_evaluation_summary.json": "acf47fbba6eafe6360fa16b9d34d1e36562d468092c7eebdf247d958cb2eab54",
+  "results/final/test_model_comparison.csv": "762d395dc3b95d89e68ab9ceadb147e8b48589a13e4d12baa9a375d6a545c008",
+  "data/split_indices.json": "2d7de4ea3427804850ebc35267eeea1bb9539679b5c90009b05a652242580053"
+}
