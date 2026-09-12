@@ -1,0 +1,237 @@
+{
+  "gcn": {
+    "model": "gcn",
+    "selected_epoch": 58,
+    "val_auc_at_selection": 0.7383,
+    "test_mean_auc": 0.7605,
+    "valid_tasks": 12,
+    "per_task_auc": {
+      "NR-AR": 0.8017,
+      "NR-AR-LBD": 0.8391,
+      "NR-AhR": 0.8332,
+      "NR-Aromatase": 0.7238,
+      "NR-ER": 0.7248,
+      "NR-ER-LBD": 0.7796,
+      "NR-PPAR-gamma": 0.7109,
+      "SR-ARE": 0.691,
+      "SR-ATAD5": 0.7812,
+      "SR-HSE": 0.7026,
+      "SR-MMP": 0.7613,
+      "SR-p53": 0.7773
+    }
+  },
+  "gat": {
+    "model": "gat",
+    "selected_epoch": 57,
+    "val_auc_at_selection": 0.761,
+    "test_mean_auc": 0.7853,
+    "valid_tasks": 12,
+    "per_task_auc": {
+      "NR-AR": 0.8062,
+      "NR-AR-LBD": 0.8701,
+      "NR-AhR": 0.8583,
+      "NR-Aromatase": 0.7503,
+      "NR-ER": 0.7453,
+      "NR-ER-LBD": 0.8581,
+      "NR-PPAR-gamma": 0.6631,
+      "SR-ARE": 0.7177,
+      "SR-ATAD5": 0.8172,
+      "SR-HSE": 0.7354,
+      "SR-MMP": 0.8047,
+      "SR-p53": 0.7973
+    }
+  },
+  "toxgraph_lite": {
+    "model": "toxgraph_lite",
+    "selected_epoch": 57,
+    "val_auc_at_selection": 0.7691,
+    "test_mean_auc": 0.7842,
+    "valid_tasks": 12,
+    "per_task_auc": {
+      "NR-AR": 0.7892,
+      "NR-AR-LBD": 0.8478,
+      "NR-AhR": 0.8684,
+      "NR-Aromatase": 0.7639,
+      "NR-ER": 0.7508,
+      "NR-ER-LBD": 0.8444,
+      "NR-PPAR-gamma": 0.6586,
+      "SR-ARE": 0.7177,
+      "SR-ATAD5": 0.7972,
+      "SR-HSE": 0.7554,
+      "SR-MMP": 0.8177,
+      "SR-p53": 0.7991
+    }
+  },
+  "graphsage": {
+    "model": "graphsage",
+    "selected_epoch": 57,
+    "val_auc_at_selection": 0.7853,
+    "test_mean_auc": 0.7889,
+    "valid_tasks": 12,
+    "per_task_auc": {
+      "NR-AR": 0.7719,
+      "NR-AR-LBD": 0.8404,
+      "NR-AhR": 0.8731,
+      "NR-Aromatase": 0.7767,
+      "NR-ER": 0.7607,
+      "NR-ER-LBD": 0.8598,
+      "NR-PPAR-gamma": 0.639,
+      "SR-ARE": 0.7443,
+      "SR-ATAD5": 0.7911,
+      "SR-HSE": 0.7591,
+      "SR-MMP": 0.8496,
+      "SR-p53": 0.8007
+    }
+  },
+  "toxgraph_bottleneck": {
+    "model": "toxgraph_bottleneck",
+    "selected_epoch": 57,
+    "val_auc_at_selection": 0.7815,
+    "test_mean_auc": 0.7997,
+    "valid_tasks": 12,
+    "per_task_auc": {
+      "NR-AR": 0.7769,
+      "NR-AR-LBD": 0.8558,
+      "NR-AhR": 0.8774,
+      "NR-Aromatase": 0.7784,
+      "NR-ER": 0.7778,
+      "NR-ER-LBD": 0.8909,
+      "NR-PPAR-gamma": 0.6703,
+      "SR-ARE": 0.7442,
+      "SR-ATAD5": 0.8137,
+      "SR-HSE": 0.7627,
+      "SR-MMP": 0.8423,
+      "SR-p53": 0.8067
+    }
+  },
+  "toxgraph": {
+    "model": "toxgraph",
+    "selected_epoch": 59,
+    "val_auc_at_selection": 0.789,
+    "test_mean_auc": 0.7939,
+    "valid_tasks": 12,
+    "per_task_auc": {
+      "NR-AR": 0.7682,
+      "NR-AR-LBD": 0.8301,
+      "NR-AhR": 0.8779,
+      "NR-Aromatase": 0.7775,
+      "NR-ER": 0.7757,
+      "NR-ER-LBD": 0.8722,
+      "NR-PPAR-gamma": 0.6667,
+      "SR-ARE": 0.7466,
+      "SR-ATAD5": 0.8199,
+      "SR-HSE": 0.76,
+      "SR-MMP": 0.8321,
+      "SR-p53": 0.7999
+    }
+  },
+  "task_statistics": {
+    "NR-AR": {
+      "valid_count": 741,
+      "pos_count": 34,
+      "neg_count": 707,
+      "pos_rate": 0.0459,
+      "has_both_classes": true
+    },
+    "NR-AR-LBD": {
+      "valid_count": 686,
+      "pos_count": 28,
+      "neg_count": 658,
+      "pos_rate": 0.0408,
+      "has_both_classes": true
+    },
+    "NR-AhR": {
+      "valid_count": 665,
+      "pos_count": 66,
+      "neg_count": 599,
+      "pos_rate": 0.0992,
+      "has_both_classes": true
+    },
+    "NR-Aromatase": {
+      "valid_count": 580,
+      "pos_count": 30,
+      "neg_count": 550,
+      "pos_rate": 0.0517,
+      "has_both_classes": true
+    },
+    "NR-ER": {
+      "valid_count": 621,
+      "pos_count": 81,
+      "neg_count": 540,
+      "pos_rate": 0.1304,
+      "has_both_classes": true
+    },
+    "NR-ER-LBD": {
+      "valid_count": 709,
+      "pos_count": 43,
+      "neg_count": 666,
+      "pos_rate": 0.0606,
+      "has_both_classes": true
+    },
+    "NR-PPAR-gamma": {
+      "valid_count": 653,
+      "pos_count": 18,
+      "neg_count": 635,
+      "pos_rate": 0.0276,
+      "has_both_classes": true
+    },
+    "SR-ARE": {
+      "valid_count": 580,
+      "pos_count": 99,
+      "neg_count": 481,
+      "pos_rate": 0.1707,
+      "has_both_classes": true
+    },
+    "SR-ATAD5": {
+      "valid_count": 722,
+      "pos_count": 28,
+      "neg_count": 694,
+      "pos_rate": 0.0388,
+      "has_both_classes": true
+    },
+    "SR-HSE": {
+      "valid_count": 645,
+      "pos_count": 44,
+      "neg_count": 601,
+      "pos_rate": 0.0682,
+      "has_both_classes": true
+    },
+    "SR-MMP": {
+      "valid_count": 599,
+      "pos_count": 109,
+      "neg_count": 490,
+      "pos_rate": 0.182,
+      "has_both_classes": true
+    },
+    "SR-p53": {
+      "valid_count": 682,
+      "pos_count": 44,
+      "neg_count": 638,
+      "pos_rate": 0.0645,
+      "has_both_classes": true
+    }
+  },
+  "bootstrap_analysis_toxgraph_vs_graphsage": {
+    "n_bootstraps": 1000,
+    "mean_delta": 0.005,
+    "median_delta": 0.0051,
+    "ci_95": [
+      -0.0073,
+      0.0174
+    ],
+    "p_value_a_le_b": 0.198
+  },
+  "gate_analysis": {
+    "top_divergent_latent_dimensions": [
+      56,
+      77,
+      13,
+      112,
+      115
+    ],
+    "mean_gate_activation_range": [
+      0.001306890044361353,
+      0.9999746084213257
+    ]
+  }
+}

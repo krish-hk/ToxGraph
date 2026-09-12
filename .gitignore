@@ -1,0 +1,35 @@
+# Virtual environment
+venv/
+env/
+.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+
+# PyTorch / ML artifacts
+checkpoints/*.pt
+checkpoints/*.pth
+results/*.json
+results/*.csv
+
+# Dataset downloads
+data/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/
