@@ -66,7 +66,7 @@ The paired non-parametric bootstrap resamples 783 molecule rows with replacement
 ### 6. Gate interpretation
 The frozen mean gate matrix has activations approximately 0.0013–0.9999 (stored maximum 0.9999746). Dimensions 56, 77, 13, 112 and 115 have the highest cross-task variance. This is variation across endpoint mean profiles; the range alone does not quantify gate variation across molecules or prove biological relevance.
 
-The preserved correlation figure labels NR-ER versus NR-ER-LBD at approximately r = 0.25, a weak positive similarity. These similar gate profiles are consistent with related endpoints using overlapping latent representation subspaces, but provide limited evidence. Exact coefficients are not retained in the summary JSON. Gate magnitudes alone are not feature importance: activations and output weights also affect logits. Latent dimensions are not identified chemical functional groups or toxicophores.
+The preserved gate-similarity artifact indicates only weak positive similarity between NR-ER and NR-ER-LBD, approximately r ≈ 0.25 based on the saved figure. This is descriptive latent-space evidence only and is not evidence of direct biological equivalence. These similar gate profiles are consistent with related endpoints using overlapping latent representation subspaces, but provide limited evidence. Exact coefficients are not retained in the summary JSON. Gate magnitudes alone are not feature importance: activations and output weights also affect logits. Latent dimensions are not identified chemical functional groups or toxicophores.
 
 <!-- pagebreak -->
 

@@ -73,7 +73,47 @@ def main():
         np.testing.assert_array_equal(probs, direct)
         assert probs.shape == (12,) and gates.shape == (12, 128)
         assert np.isfinite(probs).all() and ((probs >= 0) & (probs <= 1)).all()
-    print(f"PASS: {len(manifest)} frozen hashes, splits, six checkpoints/results, masking, ROC-AUC edge cases, and four inference examples.")
+
+    # Stale correlation claim verification across submission-facing text and REPORT.pdf
+    import re
+    from pypdf import PdfReader
+
+    stale_patterns = [
+        r"0\.65",
+        r"r\s*[>≥]\s*0\.6",
+        r"high(?:ly)?\s+correlat",
+        r"strong(?:ly)?\s+correlat",
+    ]
+
+    files_to_check = {
+        "README.md": (ROOT / "README.md").read_text(encoding="utf-8"),
+        "REPORT.md": (ROOT / "REPORT.md").read_text(encoding="utf-8"),
+    }
+
+    pdf_path = ROOT / "REPORT.pdf"
+    assert pdf_path.is_file(), "REPORT.pdf is missing"
+    reader = PdfReader(str(pdf_path))
+    assert len(reader.pages) == 4, f"REPORT.pdf must be exactly 4 pages, got {len(reader.pages)}"
+    pdf_text = "\n".join(page.extract_text() for page in reader.pages)
+    files_to_check["REPORT.pdf"] = pdf_text
+
+    for fname, text in files_to_check.items():
+        for paragraph in re.split(r"\n\s*\n", text):
+            if "NR-ER" in paragraph or "NR-ER-LBD" in paragraph:
+                for pat in stale_patterns:
+                    if re.search(pat, paragraph, re.IGNORECASE):
+                        raise AssertionError(
+                            f"Stale correlation claim found in {fname}: matched pattern '{pat}' in context: {paragraph.strip()[:120]}..."
+                        )
+
+    sub_text = (ROOT / "SUBMISSION.md").read_text(encoding="utf-8")
+    presentation_sections = sub_text.split("## Final abstract")[-1]
+    if "NR-ER" in presentation_sections:
+        for pat in stale_patterns:
+            if re.search(pat, presentation_sections, re.IGNORECASE):
+                raise AssertionError(f"Stale correlation claim found in SUBMISSION.md presentation text: '{pat}'")
+
+    print(f"PASS: {len(manifest)} frozen hashes, splits, six checkpoints/results, masking, ROC-AUC edge cases, four inference examples, and stale-claim audit (REPORT.pdf verified 4 pages).")
 
 
 if __name__ == "__main__":
