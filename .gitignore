@@ -19,7 +19,8 @@ results/*.json
 results/*.csv
 
 # Dataset downloads
-data/
+data/*
+!data/split_indices.json
 
 # IDE
 .vscode/
@@ -33,3 +34,9 @@ Thumbs.db
 
 # Jupyter
 .ipynb_checkpoints/
+
+# Submission evidence (small frozen artifacts are intentionally included)
+!checkpoints/*_best.pt
+!results/*_results.json
+runs/
+tmp/

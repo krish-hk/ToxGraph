@@ -1,268 +1,118 @@
 # ToxGraph: Task-Aware Graph Neural Networks for Multi-Assay Molecular Toxicity Prediction
 
-## Project Overview
+**Track 3 / Graph Neural Networks | Tox21 / MoleculeNet | Graph-level prediction | Mean ROC-AUC**
 
-**ToxGraph** investigates graph neural networks for multi-task molecular toxicity prediction on the **Tox21** benchmark from MoleculeNet. In multi-assay toxicity prediction, molecular graphs have varying assay coverage with missing ground-truth labels. ToxGraph addresses this via a rigorous multi-task loss-masking framework, a deterministic evaluation protocol, and an endpoint-specific feature gating mechanism.
+ToxGraph learns molecule-dependent, endpoint-specific gates over a shared GraphSAGE embedding for 12 assay predictions. The mandatory **2-layer GCN baseline**, **GraphSAGE** and **GAT** comparisons, and a three-variant gating **ablation study** are included.
 
-### Method Description: ToxGraph & Task-Aware Gating
+**Protocol:** seed = 42; fixed random train/validation/test split = **6,258 / 782 / 783**; NaN missing-label masking in loss and ROC-AUC; checkpoint selection uses validation only. Full ToxGraph was the validation-selected primary proposed model before final test evaluation.
 
-Standard multi-task GNNs share a single global graph representation across all prediction targets, which assumes that all biological assays depend on the same latent molecular sub-structures. However, toxicity endpoints possess fundamentally different mechanisms of action (e.g., nuclear receptor binding vs. cellular stress response pathways).
+## Headline frozen results
 
-**ToxGraph** introduces **endpoint-specific feature gating** over a shared GraphSAGE backbone:
-1. **Shared Graph Representation**: A 2-layer GraphSAGE encoder aggregates local molecular topology into a shared embedding vector $\mathbf{h} \in \mathbb{R}^{d}$.
-2. **Task-Aware Gating**: For each toxicity assay $t \in \{1, \dots, 12\}$, a dedicated gating module dynamically filters the latent space:
-   $$\mathbf{g}_t = \sigma(\mathbf{W}_t \mathbf{h} + \mathbf{b}_t) \in (0, 1)^d$$
-   $$\mathbf{h}_t = \mathbf{h} \odot \mathbf{g}_t$$
-   where $\odot$ denotes element-wise multiplication, allowing each assay to selectively emphasize or suppress specific molecular features conditioned on the input graph.
-3. **Task-Specific Prediction Heads**: Individual linear heads $\text{Linear}_t(\mathbf{h}_t)$ map each gated representation to its respective toxicity outcome logit.
+| Model | Parameters | Selected epoch | Validation ROC-AUC | Test ROC-AUC |
+|---|---:|---:|---:|---:|
+| Mandatory 2-layer GCN | 19,340 | 58 | 0.7383 | 0.7605 |
+| GAT | 19,852 | 57 | 0.7610 | 0.7853 |
+| GraphSAGE | 36,876 | 57 | 0.7853 | 0.7889 |
+| ToxGraph-Lite | 38,412 | 57 | 0.7691 | 0.7842 |
+| ToxGraph-Bottleneck | 91,692 | 57 | 0.7815 | **0.7997** |
+| Full ToxGraph (validation-selected primary) | 235,020 | 59 | **0.7890** | **0.7939** |
 
-#### Controlled Ablation Models
-To evaluate the nature of task-specific conditioning, we compared three distinct gating variants:
-- **ToxGraph (Full)**: Full molecule-dependent gating where $\mathbf{g}_t = \sigma(\mathbf{W}_t \mathbf{h} + \mathbf{b}_t)$ ($235,020$ parameters).
-- **ToxGraph-Lite**: Static task-specific gating vectors $\mathbf{g}_t = \sigma(\mathbf{a}_t)$ where $\mathbf{a}_t \in \mathbb{R}^d$ ($38,412$ parameters).
-- **ToxGraph-Bottleneck**: Parameter-efficient input-conditioned gating through a shared bottleneck projection $\mathbf{z} = \text{ReLU}(\mathbf{W}_{\text{shared}}\mathbf{h} + \mathbf{b}_{\text{shared}})$ with $\mathbf{W}_{\text{shared}} \in \mathbb{R}^{128 \to 32}$ and task gates $\mathbf{g}_t = \sigma(\mathbf{W}_t \mathbf{z} + \mathbf{b}_t)$ with $\mathbf{W}_t \in \mathbb{R}^{32 \to 128}$ ($91,692$ parameters, 60.99% reduction vs. Full ToxGraph).
+Full ToxGraph beats the mandatory GCN by **+0.0334** test ROC-AUC and GraphSAGE by **+0.0050**, improving **8/12 endpoints**. The paired molecule bootstrap (1,000 resamples) gives **95% CI [-0.0073, +0.0174]**, empirical **p = 0.198**. This is a positive empirical trend, **not statistically significant**. The reported empirical p is the fraction of bootstrap deltas at or below zero, not a calibrated null-hypothesis test.
 
----
+**Bottleneck obtained the highest test score, 0.7997.** It remains an ablation; we do not retroactively replace the validation-selected primary model. Neither its superiority nor a regularization explanation is established by this single split.
 
-## Dataset & Protocol
+[Four-page report](REPORT.pdf) · [Report source](REPORT.md) · [Frozen JSON](results/final/test_evaluation_summary.json) · [All per-task results](results/final/test_model_comparison.csv) · [Audit and judge preparation](SUBMISSION.md)
 
-- **Dataset**: Tox21 via MoleculeNet (`torch_geometric.datasets.MoleculeNet`)
-- **Molecules**: 7,823 compounds
-- **Tasks**: 12 nuclear receptor (NR) and stress response (SR) assays
-  - `NR-AR`, `NR-AR-LBD`, `NR-AhR`, `NR-Aromatase`, `NR-ER`, `NR-ER-LBD`, `NR-PPAR-gamma`
-  - `SR-ARE`, `SR-ATAD5`, `SR-HSE`, `SR-MMP`, `SR-p53`
-- **Features**:
-  - Node features: 9 atom properties
-  - Edge features: 3 bond attributes
-- **Missing Label Handling**:
-  - MoleculeNet encodes unmeasured assays as `NaN` (16,012 missing entries, 17.1% sparsity).
-  - Unmeasured assays are explicitly masked out in the multi-task binary cross-entropy loss (`BCEWithLogitsLoss`) and per-task ROC-AUC calculation. Missing assays are **never** treated as negative outcomes.
+## Hackathon compliance
 
----
+| Requirement | Explicit evidence |
+|---|---|
+| Track 3, graph-level MoleculeNet ROC-AUC | Tox21: 7,823 molecules, 12 binary endpoints |
+| Mandatory 2-layer GCN; GAT and GraphSAGE comparisons | `src/models.py`; all six models in table above |
+| Beat mandatory baseline | Full 0.7939 vs GCN 0.7605 on test |
+| Fixed split, seed = 42 | `data/split_indices.json`, `src/data.py`, `src/utils.py` |
+| Missing-label masking | `src/training.py`, `src/metrics.py`; single-class tasks skipped |
+| Ablation and originality | No gates → static → bottleneck dynamic → full dynamic |
+| One-command end-to-end run | `python reproduce.py` after environment installation |
+| Report: problem, method, baseline results, ablation, limitations; max 4 pages | `REPORT.md`, `REPORT.pdf` |
+| Demo / presentation | `python -m streamlit run app.py`; recording script in `SUBMISSION.md` |
+| Recorded demo upload | **Outstanding: no recorded demo is present in this working copy** |
+| Citations | References in report; dependencies in requirements files |
 
-## Reproducibility & Split Strategy
+The supplied brief does not specify actual Tox21 organizer split indices. This repository's fixed random split is explicit; equivalence to any separately distributed organizer partition cannot be established from the attachment. Team membership, submitting lead, deadline date and upload platform also require external verification.
 
-- **Random Seed**: `42` applied deterministically across Python `random`, `numpy`, and `torch`.
-- **Splitting Strategy**: Deterministic random split (80% train / 10% validation / 10% test).
-- **Split Sizes**:
-  - Train: 6,258 molecules
-  - Validation: 782 molecules
-  - Test: 783 molecules (strictly locked — **not** evaluated during model development)
-- **Split Preservation**: Split indices are saved to `data/split_indices.json` ensuring identical evaluation subsets across all models.
+## Method and originality
 
----
+Standard multi-task graph classifiers pool a shared molecular embedding and apply task-specific output weights. Those weights already permit different task preferences. ToxGraph adds a **nonlinear, molecule-dependent reweighting** before each endpoint's linear output head:
 
-## Installation
-
-### 1. Environment Setup
-
-Python 3.13 is recommended.
-
-```bash
-# Clone the repository
-git clone https://github.com/krish-hk/ToxGraph.git
-cd ToxGraph
-
-# Create and activate a local virtual environment
-python -m venv venv
-# On Windows:
-.\venv\Scripts\activate
-# On Linux/macOS:
-source venv/bin/activate
+```text
+h = Dropout(MeanPool(ReLU(SAGEConv2(ReLU(SAGEConv1(graph))))))
+g_t = sigmoid(W_t h + b_t)
+h_t = h * g_t
+logit_t = Linear_t(h_t)
 ```
 
-### 2. Install Dependencies
+All encoders have two message-passing layers and hidden width 128. GCN and GraphSAGE use ReLU; GraphSAGE uses mean aggregation. GAT uses four 32-channel first-layer heads, one 128-channel second-layer head, ELU and attention dropout. All use global mean pooling and pooled dropout 0.3. Dropout is disabled at inference.
 
-```bash
-# Install PyTorch (CPU or CUDA 12.4+):
-# CPU:
-pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+| Ablation | Mechanism | Interpretation |
+|---|---|---|
+| GraphSAGE | No gate | Shared encoder with task-specific linear output rows |
+| ToxGraph-Lite | `sigmoid(a_t)`, static across molecules | Underperformed GraphSAGE on validation and test |
+| ToxGraph-Bottleneck | Shared ReLU projection 128 → 32; per-task 32 → 128 sigmoid gates | Better than static on both splits; below GraphSAGE on validation, highest test score |
+| Full ToxGraph | Per-task 128 → 128 sigmoid gate | Highest validation; positive test trend over GraphSAGE |
 
-# Core requirements
-pip install -r requirements.txt
-```
+Static gates can be absorbed into linear head weights at inference; their result does **not** prove diminished representational capacity. The comparison is not parameter-matched, so added capacity and optimization are confounders. The contribution is this implemented task-conditioning design, controlled comparison and analysis on Tox21; global architectural novelty is not claimed.
 
----
+## Data and scientific scope
 
-## Interactive Demonstration Application
+PyTorch Geometric `MoleculeNet(root="data", name="Tox21")` downloads and processes data on first use (network access required); later runs reuse `data/tox21/`. Graphs contain nine categorical atom-feature columns and three bond-attribute columns. The frozen models cast atom category indices to floats and use **connectivity but not bond attributes**. There is no learned categorical feature encoder or fitted normalization. The demo calls the same PyG `from_smiles` featurizer.
 
-An interactive web demonstration is provided using Streamlit to perform real-time toxicity profiling with the frozen **ToxGraph** model checkpoint.
+Of 93,876 assay entries, 16,012 are NaN (17.1%). Masked BCE averages valid entries; missing labels never contribute as negatives. ROC-AUC masks each endpoint independently, skips missing/single-class endpoints, and macro-averages unrounded valid task AUCs before reporting four decimals. All 12 tasks were valid in the frozen test evaluation. Checkpoints are selected on the four-decimal validation mean returned by the existing metric code; ties retain the earlier epoch.
 
-### Launch Command
+The historical protocol used train data for gradient updates and validation for model/checkpoint selection, followed by final frozen test evaluation. Source inspection confirms no test loader in training. Historical dataset diagnostics do summarize labels across the full dataset; therefore we do not claim that test labels were never inspected. Artifacts are consistent with the stated protocol but cannot independently prove how many historical evaluations occurred. Reproductions after test disclosure are not new untouched-test experiments.
 
-```bash
-streamlit run app.py
-```
+## Reproducibility
 
-### Input & Output:
-- **Input**: Enter any valid SMILES chemical string (e.g. `Cn1cnc2c1c(=O)n(C)c(=O)n2C` for Caffeine, `CC(=O)Oc1ccccc1C(=O)O` for Aspirin), or select from preset benchmark examples in the sidebar.
-- **Processing**: RDKit validates the chemical structure and renders a 2D depiction; the exact 9-dimensional graph featurization is constructed and passed to the frozen `checkpoints/toxgraph_best.pt` model on CPU.
-- **Output**:
-  1. **Multi-Assay Toxicity Profile**: A sorted horizontal bar chart and complete tabular breakdown of predicted probability of assay activity across all 12 Tox21 assays, distinguishing Nuclear Receptor (NR) from Stress Response (SR) pathways.
-  2. **Task-Aware Feature Gating**: A dynamic $12 \times 128$ heatmap visualizing the exact endpoint-specific gate activations $\mathbf{g}_t = \sigma(\mathbf{W}_t \mathbf{h} + \mathbf{b}_t)$ computed for the input molecule.
-- **Disclaimer**: Research demonstration only. Predictions are model outputs and are not a substitute for experimental toxicology or safety assessment.
+Run commands from the repository root. The audit used Windows, Python 3.13.15 and CPU PyTorch 2.14.0+cpu. `requirements-lock.txt` records the **audit environment**, not an independently verified original training environment. Hardware and library changes can change training outcomes; seed locking does not guarantee bitwise reproducibility across devices.
 
----
-
-## Training Commands
-
-All models use the same unified CLI interface:
-
-```bash
-# 1. 2-layer GCN Baseline
-python train.py --model gcn --epochs 60 --patience 15 --lr 0.001 --hidden_dim 128 --dropout 0.3 --batch_size 64 --seed 42
-
-# 2. GraphSAGE Baseline
-python train.py --model graphsage --epochs 60 --patience 15 --lr 0.001 --hidden_dim 128 --dropout 0.3 --batch_size 64 --seed 42
-
-# 3. GAT Baseline
-python train.py --model gat --epochs 60 --patience 15 --lr 0.001 --hidden_dim 128 --dropout 0.3 --batch_size 64 --seed 42
-
-# 4. ToxGraph (Full Model with Dynamic Task-Aware Gating)
-python train.py --model toxgraph --epochs 60 --patience 15 --lr 0.001 --hidden_dim 128 --dropout 0.3 --batch_size 64 --seed 42
-
-# 5. ToxGraph-Lite (Static Vector-Gated Variant)
-python train.py --model toxgraph_lite --epochs 60 --patience 15 --lr 0.001 --hidden_dim 128 --dropout 0.3 --batch_size 64 --seed 42
-
-# 6. ToxGraph-Bottleneck (Shared Bottleneck Input-Conditioned Variant)
-python train.py --model toxgraph_bottleneck --epochs 60 --patience 15 --lr 0.001 --hidden_dim 128 --dropout 0.3 --batch_size 64 --seed 42
-```
-
----
-
-## Model Architectures
-
-### 1. 2-Layer GCN
-- GCNConv(9 → 128) → ReLU → GCNConv(128 → 128) → ReLU → MeanPool → Dropout(0.3) → Linear(128 → 12)
-- Parameters: 19,340
-
-### 2. GraphSAGE
-- SAGEConv(9 → 128, mean) → ReLU → SAGEConv(128 → 128, mean) → ReLU → MeanPool → Dropout(0.3) → Linear(128 → 12)
-- Parameters: 36,876
-
-### 3. GAT (Graph Attention Network)
-- GATConv(9 → 32, heads=4) → ELU → GATConv(128 → 128, heads=1) → ELU → MeanPool → Dropout(0.3) → Linear(128 → 12)
-- Parameters: 19,852
-
-### 4. ToxGraph (Proposed Model)
-- Shared GraphSAGE backbone (128-d) → For each task $t$: $\mathbf{g}_t = \sigma(\mathbf{W}_t \mathbf{h} + \mathbf{b}_t)$, $\mathbf{h}_t = \mathbf{h} \odot \mathbf{g}_t$, $\text{logit}_t = \text{Linear}_t(\mathbf{h}_t)$
-- Parameters: 235,020
-
-### 5. ToxGraph-Lite (Static Vector Gating)
-- Shared GraphSAGE backbone (128-d) → For each task $t$: $\mathbf{g}_t = \sigma(\mathbf{a}_t)$, $\mathbf{h}_t = \mathbf{h} \odot \mathbf{g}_t$, $\text{logit}_t = \text{Linear}_t(\mathbf{h}_t)$
-- Parameters: 38,412
-
-### 6. ToxGraph-Bottleneck (Bottleneck Input-Conditioned Gating)
-- Shared GraphSAGE backbone (128-d) → Shared Bottleneck $\mathbf{z} = \text{ReLU}(\mathbf{W}_{\text{shared}}\mathbf{h} + \mathbf{b}_{\text{shared}})$ (32-d) → For each task $t$: $\mathbf{g}_t = \sigma(\mathbf{W}_t \mathbf{z} + \mathbf{b}_t)$, $\mathbf{h}_t = \mathbf{h} \odot \mathbf{g}_t$, $\text{logit}_t = \text{Linear}_t(\mathbf{h}_t)$
-- Parameters: 91,692 (60.99% reduction vs. Full ToxGraph)
-
----
-
-## Final Test Benchmark Results (Phase 5 — Frozen Single Evaluation)
-
-> **Strict Evaluation Protocol**:
-> - Models were completely frozen after validation development.
-> - The locked test set ($N = 783$ molecules) was evaluated **exactly once** using best validation-selected checkpoints.
-> - Zero post-test hyperparameter tuning, retraining, or model selection was conducted.
-
-### Final Model Comparison (Validation vs. Locked Test)
-
-| Model | Parameters | Selected Epoch | Validation ROC-AUC | Test Mean ROC-AUC | Test vs. GraphSAGE ($\Delta$) |
-|---|---|---|---|---|---|
-| **GCN** | 19,340 | 58 | 0.7383 | 0.7605 | -0.0284 |
-| **GAT** | 19,852 | 57 | 0.7610 | 0.7853 | -0.0036 |
-| **ToxGraph-Lite** (Static) | 38,412 | 57 | 0.7691 | 0.7842 | -0.0047 |
-| **GraphSAGE** (Backbone) | 36,876 | 57 | 0.7853 | 0.7889 | Baseline (0.0000) |
-| **ToxGraph** (Full, Proposed) | 235,020 | 59 | **0.7890** | **0.7939** | **+0.0050** |
-| **ToxGraph-Bottleneck** | 91,692 | 57 | 0.7815 | **0.7997** | **+0.0108** |
-
-### Per-Task Test ROC-AUC Breakdown
-
-| Assay Task | Category | GCN | GAT | ToxGraph-Lite | GraphSAGE | ToxGraph (Proposed) | $\Delta$ (ToxGraph - SAGE) | ToxGraph-Bottleneck |
-|---|---|---|---|---|---|---|---|---|
-| **NR-AR** | Nuclear Receptor | 0.8017 | 0.8062 | 0.7892 | 0.7719 | 0.7682 | -0.0037 | 0.7769 |
-| **NR-AR-LBD** | Nuclear Receptor | 0.8391 | 0.8701 | 0.8478 | 0.8404 | 0.8301 | -0.0103 | 0.8558 |
-| **NR-AhR** | Nuclear Receptor | 0.8332 | 0.8583 | 0.8684 | 0.8731 | **0.8779** | **+0.0048** | 0.8774 |
-| **NR-Aromatase** | Nuclear Receptor | 0.7238 | 0.7503 | 0.7639 | 0.7767 | **0.7775** | **+0.0008** | 0.7784 |
-| **NR-ER** | Nuclear Receptor | 0.7248 | 0.7453 | 0.7508 | 0.7607 | **0.7757** | **+0.0150** | 0.7778 |
-| **NR-ER-LBD** | Nuclear Receptor | 0.7796 | 0.8581 | 0.8444 | 0.8598 | **0.8722** | **+0.0124** | 0.8909 |
-| **NR-PPAR-gamma** | Nuclear Receptor | 0.7109 | 0.6631 | 0.6586 | 0.6390 | **0.6667** | **+0.0277** | 0.6703 |
-| **SR-ARE** | Stress Response | 0.6910 | 0.7177 | 0.7177 | 0.7443 | **0.7466** | **+0.0023** | 0.7442 |
-| **SR-ATAD5** | Stress Response | 0.7812 | 0.8172 | 0.7972 | 0.7911 | **0.8199** | **+0.0288** | 0.8137 |
-| **SR-HSE** | Stress Response | 0.7026 | 0.7354 | 0.7554 | 0.7591 | **0.7600** | **+0.0009** | 0.7627 |
-| **SR-MMP** | Stress Response | 0.7613 | 0.8047 | 0.8177 | 0.8496 | 0.8321 | -0.0175 | 0.8423 |
-| **SR-p53** | Stress Response | 0.7773 | 0.7973 | 0.7991 | 0.8007 | 0.7999 | -0.0008 | 0.8067 |
-| **Mean** | — | 0.7605 | 0.7853 | 0.7842 | 0.7889 | **0.7939** | **+0.0050** | **0.7997** |
-
-- **Win/Loss Ratio**: Full ToxGraph improves over GraphSAGE on **8 out of 12 tasks** (66.7% win rate) on the test split.
-- Largest gains were observed on **SR-ATAD5** (+0.0288), **NR-PPAR-gamma** (+0.0277), **NR-ER** (+0.0150), and **NR-ER-LBD** (+0.0124).
-
----
-
-## Statistical Robustness Analysis (Bootstrap Resampling)
-
-We executed a 1,000-iteration non-parametric bootstrap over test set molecules to evaluate the difference $\Delta = \text{AUC}(\text{ToxGraph}) - \text{AUC}(\text{GraphSAGE})$:
-- **Mean Test $\Delta$**: $+0.0050$
-- **Median Test $\Delta$**: $+0.0051$
-- **95% Bootstrap Confidence Interval**: $[-0.0073, +0.0174]$
-- **Empirical $p$-value** ($\Delta \le 0$): $p = 0.1980$
-
-> **Scientific Interpretation**: While ToxGraph demonstrates consistent positive empirical advantage on the majority of endpoints (8/12 assays improved, mean $+0.0050$ ROC-AUC), the 95% bootstrap confidence interval crosses zero ($p = 0.1980$) under the fixed test sample size ($N = 783$) and substantial label sparsity. This is typical for multi-task molecular toxicity benchmarks and indicates positive practical utility while appropriately contextualizing statistical certainty.
-
----
-
-## Task Gate Interpretability Analysis
-
-Test-time gate tensor analysis $\mathbf{g}_t = \sigma(\mathbf{W}_t \mathbf{h} + \mathbf{b}_t) \in [0, 1]^{128}$ revealed clear endpoint differentiation:
-1. **Dynamic Dynamic Range**: Mean gate activations range from $0.0013$ to $0.9999$, demonstrating non-degenerate, highly selective representation masking.
-2. **Top Divergent Latent Dimensions**: Dimensions `[56, 77, 13, 112, 115]` exhibit the highest cross-task gate variance, indicating features that are actively filtered in opposing manners across assay classes.
-3. **Biological Alignment**: Related receptor pathways (such as NR-ER and NR-ER-LBD) share moderately correlated gating profiles ($r > 0.6$), whereas orthogonal stress-response assays (e.g. SR-ATAD5 vs. NR-AR) deploy distinct subspace masks.
-*(Note: Latent dimensions represent learned continuous graph representations and are not claimed to map to specific chemical functional groups without explicit post-hoc atom attribution.)*
-
----
-
-## Generated Artifacts and Publication Figures
-
-All artifacts are automatically generated by `evaluate_test.py`:
-
-```
-results/
-├── final/
-│   ├── test_evaluation_summary.json         # Machine-readable test metrics, stats, CI, gate analysis
-│   └── test_model_comparison.csv            # Tabular per-task and mean test ROC-AUCs
-└── figures/
-    ├── model_test_roc_auc_comparison.png    # Bar chart of all 6 frozen models on test set
-    ├── graphsage_vs_toxgraph_per_task.png   # Paired per-task test comparison (SAGE vs. ToxGraph)
-    ├── per_task_improvement_delta.png       # Sorted test ROC-AUC delta chart with zero line
-    ├── validation_curves_comparison.png     # Validation ROC-AUC convergence across epochs
-    ├── task_gate_heatmap.png                # 12-task by 128-dim mean gate activation heatmap
-    └── task_gate_similarity_heatmap.png     # Pairwise Pearson correlation between task gates
-```
-
-To re-run test evaluation and regenerate all figures:
 ```powershell
-python evaluate_test.py
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+python -m pip install -r requirements-lock.txt
+python verify_submission.py
+python reproduce.py
 ```
 
----
+On macOS/Linux, activate with `source .venv/bin/activate`. If the Windows CPU lock cannot be installed on another platform, install suitable PyTorch and `python -m pip install -r requirements.txt`; this is a different environment and exact score matching is not guaranteed.
 
-## Project Structure
+**One-command execution:** `python reproduce.py` trains all six configurations (60 epochs maximum, patience 15, Adam lr 0.001, batch 64, hidden 128, dropout 0.3, seed 42), saves validation selection before evaluation, then runs test metrics, bootstrap and six figures. It requires training time; it was dry-run checked during this audit, not retrained. It writes exclusively to a new `runs/reproduction/` directory; choose `--output runs/reproduction-2` for another run. The original split is reused and validated. `python reproduce.py --dry-run` prints the exact commands without computation.
 
+Useful individual commands:
+
+```powershell
+# A single reproduction model; change --model for another architecture.
+python train.py --model toxgraph --epochs 60 --patience 15 --lr 0.001 --hidden_dim 128 --dropout 0.3 --batch_size 64 --seed 42 --output_root runs/manual
+
+# Re-evaluate existing frozen checkpoints into NEW outputs (not a new unbiased test).
+python evaluate_test.py --output_root runs/evaluation
+
+# Launch the frozen Full ToxGraph demo.
+python -m streamlit run app.py
+
+# Regenerate the report from its single Markdown source; does not run models.
+python generate_pdf_report.py
 ```
-ToxGraph/
-├── .gitignore               # Ignores venv/, data/, checkpoints/, results/
-├── README.md                # Comprehensive documentation, benchmarks, and analysis
-├── requirements.txt         # Verified package dependencies
-├── train.py                 # Unified CLI experiment runner
-├── evaluate_test.py         # Phase 5 frozen test evaluation, bootstrap, and plotting
-├── src/
-│   ├── __init__.py
-│   ├── data.py              # Dataset downloading, verification, missing-label masking, splits
-│   ├── models.py            # GNN architecture registry (GCN, GraphSAGE, GAT, ToxGraph variants)
-│   ├── training.py          # Masked BCE loss, training loop, early stopping
-│   ├── metrics.py           # Multi-task ROC-AUC with single-class edge-case handling
-│   └── utils.py             # Reproducible seeding, parameter counts, checkpoint/result I/O
-├── data/                    # Dataset root and deterministic split_indices.json (ignored by Git)
-├── checkpoints/             # Model checkpoints (*.pt, ignored by Git)
-└── results/                 # JSON execution metrics, test summary, CSV, and figures
-```
+
+Training outputs: `<output_root>/checkpoints/*_best.pt` and `<output_root>/results/*_results.json`. Evaluation outputs: `<output_root>/final/` and `<output_root>/figures/`. Existing model/evaluation outputs are refused. Keep the shipped `checkpoints/`, `results/` and `data/split_indices.json` with the submission; `.gitignore` now includes these small frozen evidence files. SHA-256 fingerprints captured before audit edits are in `submission/frozen_manifest.json` and checked by `verify_submission.py`.
+
+## Demo and interpretability
+
+The demo validates SMILES, renders a 2D molecule, returns all 12 **predicted assay activity probabilities**, and shows a molecule-specific 12 × 128 gate heatmap from the frozen Full ToxGraph checkpoint. Probabilities are uncalibrated research outputs, not medical advice or chemical safety determinations. Common examples are demonstration inputs, not evidence of generalization.
+
+The frozen summary gives mean gate activations approximately 0.0013–0.9999 (stored maximum 0.9999746) and highest cross-task variance at dimensions 56, 77, 13, 112 and 115. The preserved correlation figure labels NR-ER versus NR-ER-LBD at approximately r = 0.25 (weak positive similarity), not the 0.65 previously stated in the report. Their similar profiles are consistent with related endpoints using overlapping latent representation subspaces, but this is limited evidence. These are descriptive latent-space patterns, not validated biological mechanisms or atom-level explanations; exact correlation coefficients are not retained in the JSON summary.
+
+## Limitations and next experiments
+
+One random split and one seed do not establish scaffold generalization or training stability. Class imbalance and only 783 test molecules limit precision. Full has 6.37 times GraphSAGE's parameters; Bottleneck uses 60.99% fewer than Full. Capacity-matched heads, new scaffold evaluation, repeated training seeds, edge-aware encoders and calibration would be useful **future experiments on a separately planned evaluation protocol**. None was run or substituted into this benchmark.
+
+See `SUBMISSION.md` for the full scorecard, changelog, remaining submission gaps, final abstract, presentation script and judge Q&A.

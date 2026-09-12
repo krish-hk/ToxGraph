@@ -6,7 +6,7 @@ Usage:
     python train.py --model gcn
     python train.py --model gcn --epochs 100 --hidden_dim 128 --lr 1e-3
 
-Supports: gcn (more models coming: graphsage, gat, toxgraph)
+Supports GCN, GraphSAGE, GAT and all three ToxGraph variants.
 """
 
 import argparse
@@ -56,6 +56,8 @@ def parse_args():
                         help="Root directory for dataset")
     parser.add_argument("--no_verify", action="store_true",
                         help="Skip dataset verification")
+    parser.add_argument("--output_root", default="runs/manual",
+                        help="Separate reproduction output directory; existing model files are protected")
     return parser.parse_args()
 
 
@@ -94,6 +96,10 @@ def print_verification_report(report):
 
 def main():
     args = parse_args()
+    checkpoint_path = os.path.join(args.output_root, "checkpoints", f"{args.model}_best.pt")
+    results_path = os.path.join(args.output_root, "results", f"{args.model}_results.json")
+    if any(os.path.exists(p) for p in (checkpoint_path, results_path)):
+        raise FileExistsError("Model outputs already exist; choose a new --output_root")
     start_time = time.time()
 
     print(f"\n{'='*70}")
@@ -129,6 +135,8 @@ def main():
         split_info["train_size"] = len(split_info["train_indices"])
         split_info["val_size"] = len(split_info["val_indices"])
         split_info["test_size"] = len(split_info["test_indices"])
+        if split_info["seed"] != args.seed:
+            raise ValueError("Requested seed differs from saved split seed")
     else:
         print("\nCreating train/val/test split (80/10/10)...")
         train_ds, val_ds, test_ds, split_info = create_split(
@@ -139,6 +147,7 @@ def main():
           f"Val: {split_info['val_size']}  |  "
           f"Test: {split_info['test_size']}")
 
+    split_info["split_dir"] = args.data_root
     # 6. Verify dataset
     if not args.no_verify:
         report = verify_dataset(dataset, train_ds, val_ds, test_ds, split_info)
@@ -179,7 +188,6 @@ def main():
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
     # 11. Train
-    checkpoint_path = os.path.join("checkpoints", f"{args.model}_best.pt")
     print(f"\nTraining for up to {args.epochs} epochs "
           f"(patience={args.patience})...\n")
 
@@ -251,7 +259,6 @@ def main():
         "training_time_seconds": round(elapsed, 1),
     }
 
-    results_path = os.path.join("results", f"{args.model}_results.json")
     save_results(results, results_path)
 
     print(f"\n  Results saved to:   {results_path}")

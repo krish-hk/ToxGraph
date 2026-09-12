@@ -53,6 +53,8 @@ def validate_smiles(smiles: str) -> Tuple[bool, Optional[Chem.Mol], Optional[str
         mol = Chem.MolFromSmiles(clean_smiles)
         if mol is None:
             return False, None, f"RDKit could not parse SMILES '{clean_smiles}'. Please verify chemical syntax."
+        if mol.GetNumAtoms() == 0:
+            return False, None, "SMILES must contain at least one atom."
         return True, mol, None
     except Exception as e:
         return False, None, f"Error parsing SMILES: {str(e)}"
@@ -70,6 +72,9 @@ def smiles_to_graph_data(smiles: str):
     and connectivity from MoleculeNet Tox21 training pipeline.
     """
     clean_smiles = smiles.strip()
+    valid, _, error = validate_smiles(clean_smiles)
+    if not valid:
+        raise ValueError(error)
     data = from_smiles(clean_smiles)
     if data is None or data.x is None:
         raise ValueError(f"Failed to generate molecular graph for '{clean_smiles}'.")
@@ -92,7 +97,7 @@ def load_toxgraph_checkpoint(checkpoint_path: str = "checkpoints/toxgraph_best.p
         dropout=0.3
     )
 
-    checkpoint = torch.load(checkpoint_path, map_location=device)
+    checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=True)
     model.load_state_dict(checkpoint["model_state_dict"])
     model.to(device)
     model.eval()

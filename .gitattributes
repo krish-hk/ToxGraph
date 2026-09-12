@@ -1,0 +1,9 @@
+*.pdf binary
+*.pt binary
+*.pth binary
+*.png binary
+# Preserve frozen hashes across platform checkouts.
+data/split_indices.json -text
+results/*_results.json -text
+results/final/*.json -text
+results/final/*.csv -text

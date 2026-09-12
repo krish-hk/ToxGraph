@@ -133,11 +133,23 @@ def load_split(dataset, split_dir: str = "data"):
     with open(split_path, "r") as f:
         split_data = json.load(f)
 
+    validate_split_indices(split_data, len(dataset))
+
     train_dataset = dataset[torch.tensor(split_data["train_indices"])]
     val_dataset = dataset[torch.tensor(split_data["val_indices"])]
     test_dataset = dataset[torch.tensor(split_data["test_indices"])]
 
     return train_dataset, val_dataset, test_dataset, split_data
+
+
+def validate_split_indices(split_data, n):
+    """Reject corrupt or incompatible partitions without rewriting saved indices."""
+    parts = [split_data[k] for k in ("train_indices", "val_indices", "test_indices")]
+    flat = [i for part in parts for i in part]
+    if any(type(i) is not int for i in flat):
+        raise ValueError("Split indices must be integers")
+    if any(not part for part in parts) or len(flat) != n or set(flat) != set(range(n)):
+        raise ValueError("Split must cover the dataset exactly once with three nonempty partitions")
 
 
 def get_data_loaders(train_dataset, val_dataset, test_dataset=None,
@@ -224,11 +236,13 @@ def verify_dataset(dataset, train_dataset, val_dataset, test_dataset, split_info
     checks["missing_labels_are_nan"] = bool(torch.isnan(all_labels).any())
 
     # 4. No split overlap (verified during creation, re-verify here)
-    train_set = set(range(len(train_dataset)))
-    checks["no_split_overlap"] = True  # Verified during split creation
+    with open(split_info.get("split_saved_to", os.path.join(split_info.get("split_dir", "data"), "split_indices.json"))) as f:
+        validate_split_indices(json.load(f), len(dataset))
+    checks["no_split_overlap"] = True  # Validated against saved original indices above
 
     # 5. Test data not used for training
-    checks["test_set_isolated"] = True  # By design
+    # Historical isolation cannot be proved by a dataset check. The training
+    # entry point constructs only training and validation loaders.
 
     report["sanity_checks"] = checks
 

@@ -7,6 +7,7 @@ visualize dynamic task-specific gating patterns.
 """
 
 import os
+from pathlib import Path
 import streamlit as st
 import numpy as np
 import pandas as pd
@@ -89,6 +90,7 @@ def main():
         "reweights the shared molecular representation specifically for each biological endpoint."
     )
 
+    st.caption("Track 3 / Graph Neural Networks · Tox21 · seed = 42 · Research use only. Probabilities are uncalibrated model estimates, not safety determinations.")
     st.markdown("---")
 
     # Preset benchmark examples for quick review
@@ -101,6 +103,14 @@ def main():
         "Nicotine (Alkaloid)": "CN1CCC[C@H]1c2cccnc2",
     }
 
+    if "smiles_input" not in st.session_state:
+        st.session_state["smiles_input"] = preset_examples["Caffeine (Stimulant)"]
+
+    def apply_preset():
+        selected = st.session_state["molecule_preset"]
+        if selected != "Custom SMILES":
+            st.session_state["smiles_input"] = preset_examples[selected]
+
     # Sidebar: Model status & Example Selector
     with st.sidebar:
         st.header("⚙️ Experiment Controls")
@@ -110,14 +120,16 @@ def main():
             "Select Example Molecule:",
             options=list(preset_examples.keys()),
             index=3, # Default to Caffeine
+            key="molecule_preset",
+            on_change=apply_preset,
             help="Choose a pre-defined common molecule or select 'Custom SMILES' to enter your own."
         )
 
         st.markdown("---")
         st.subheader("Model Status")
-        checkpoint_path = "checkpoints/toxgraph_best.pt"
+        checkpoint_path = str(Path(__file__).resolve().parent / "checkpoints/toxgraph_best.pt")
         if os.path.exists(checkpoint_path):
-            st.success("✅ Frozen ToxGraph Checkpoint Loaded\n\n`checkpoints/toxgraph_best.pt`")
+            st.success("Frozen ToxGraph checkpoint available\n\n`checkpoints/toxgraph_best.pt`")
         else:
             st.error("❌ Checkpoint `checkpoints/toxgraph_best.pt` not found!")
 
@@ -128,22 +140,20 @@ def main():
         - **Parameters**: 235,020
         - **Test ROC-AUC**: **0.7939** (vs. SAGE 0.7889)
         - **Endpoints**: 12 Tox21 assays
+        - **Selection**: validation only (0.7890)
+        - **Bottleneck test**: 0.7997 (highest observed)
+        - **Uncertainty**: Full vs. SAGE CI crosses zero; not statistically significant
         """)
 
         st.markdown("---")
         st.info("💡 **Note**: Common examples are provided for user convenience only. No biological conclusions should be attached to individual examples.")
-
-    # Determine default SMILES from selection
-    initial_smiles = preset_examples[selected_example]
-    if not initial_smiles and "current_smiles" in st.session_state:
-        initial_smiles = st.session_state["current_smiles"]
 
     # Input Section
     col_input, col_btn = st.columns([5, 1])
     with col_input:
         smiles_input = st.text_input(
             "Enter SMILES String:",
-            value=initial_smiles,
+            key="smiles_input",
             placeholder="e.g. Cn1cnc2c1c(=O)n(C)c(=O)n2C",
             help="Input a valid chemical SMILES representation."
         )
@@ -188,7 +198,8 @@ def main():
 
         # 3. Model Inference
         try:
-            model, _ = get_cached_model(checkpoint_path)
+            model, checkpoint = get_cached_model(checkpoint_path)
+            st.caption(f"Loaded validation-selected Full ToxGraph: epoch {checkpoint['epoch']}, validation ROC-AUC {checkpoint['val_auc']:.4f}.")
         except Exception as e:
             st.error(f"Failed to load model checkpoint: {str(e)}")
             return
@@ -205,7 +216,7 @@ def main():
         st.markdown("---")
 
         # 4. Results Section: Table & Sorted Bar Chart
-        st.subheader("📊 Multi-Assay Toxicity Profile")
+        st.subheader("📊 Predicted Assay Activity Probabilities")
 
         # Build results DataFrame
         records = []

@@ -4,13 +4,14 @@ gate interpretability, and publication-ready figures.
 
 Strict Protocol:
 - Uses the frozen best checkpoints from validation-based selection.
-- Evaluates the test set exactly once.
+- Historical final evaluation used frozen checkpoints; reruns are reproductions.
 - No retraining or tuning is performed.
-- Saves machine-readable JSON and CSV results to results/final/.
-- Generates publication figures under results/figures/.
+- Saves machine-readable JSON and CSV results under a new output root.
+- Generates figures under that output root, leaving frozen figures intact.
 """
 
 import os
+import argparse
 import json
 import numpy as np
 import pandas as pd
@@ -149,8 +150,9 @@ def extract_toxgraph_gates(model, test_loader, device, task_names):
     return all_gates
 
 
-def generate_figures(test_results, task_stats, bootstrap_results, gate_data, output_dir="results/figures"):
+def generate_figures(test_results, task_stats, bootstrap_results, gate_data, output_dir="results/figures", history_dir="results"):
     """Generate all requested publication-quality figures."""
+    os.makedirs(output_dir, exist_ok=True)
     plt.style.use('default')
     plt.rcParams.update({'font.size': 11, 'axes.grid': True, 'grid.alpha': 0.3})
 
@@ -230,7 +232,7 @@ def generate_figures(test_results, task_stats, bootstrap_results, gate_data, out
     plt.figure(figsize=(10, 5))
     histories = {}
     for m in ["gcn", "gat", "graphsage", "toxgraph"]:
-        res_file = os.path.join("results", f"{m}_results.json")
+        res_file = os.path.join(history_dir, f"{m}_results.json")
         if os.path.exists(res_file):
             with open(res_file) as f:
                 histories[m] = json.load(f)["epoch_history"]["val_mean_auc"]
@@ -289,6 +291,19 @@ def generate_figures(test_results, task_stats, bootstrap_results, gate_data, out
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Reproduce evaluation without overwriting frozen results")
+    parser.add_argument("--data_root", default="data")
+    parser.add_argument("--checkpoint_dir", default="checkpoints")
+    parser.add_argument("--history_dir", default="results")
+    parser.add_argument("--output_root", default="runs/evaluation")
+    args = parser.parse_args()
+    if os.path.exists(args.output_root):
+        raise FileExistsError("Choose a new --output_root; evaluation outputs are never overwritten")
+    for name in ("gcn", "gat", "graphsage", "toxgraph", "toxgraph_lite", "toxgraph_bottleneck"):
+        if not os.path.isfile(os.path.join(args.checkpoint_dir, f"{name}_best.pt")):
+            raise FileNotFoundError(f"Missing checkpoint for {name}")
+    final_dir = os.path.join(args.output_root, "final")
+    figure_dir = os.path.join(args.output_root, "figures")
     print("=" * 70)
     print("PHASE 5: FINAL TEST EVALUATION & SCIENTIFIC ANALYSIS")
     print("=" * 70)
@@ -297,8 +312,8 @@ def main():
 
     # 1. Load Dataset & Test Split
     print("\nLoading dataset and locked test split...")
-    dataset = load_tox21(root="data")
-    _, _, test_ds, split_info = load_split(dataset, split_dir="data")
+    dataset = load_tox21(root=args.data_root)
+    _, _, test_ds, split_info = load_split(dataset, split_dir=args.data_root)
     print(f"Test split size: {len(test_ds)} molecules (strictly locked)")
 
     sample = dataset[0]
@@ -328,6 +343,7 @@ def main():
         ("toxgraph", "checkpoints/toxgraph_best.pt"),
     ]
 
+    models_to_evaluate = [(name, os.path.join(args.checkpoint_dir, os.path.basename(path))) for name, path in models_to_evaluate]
     test_results = {}
     print("\nEvaluating frozen model checkpoints on the test set:")
     for model_name, ckpt_path in models_to_evaluate:
@@ -342,7 +358,7 @@ def main():
             hidden_dim=128,
             dropout=0.3
         )
-        ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
+        ckpt = torch.load(ckpt_path, map_location=device, weights_only=True)
         model.load_state_dict(ckpt["model_state_dict"])
         model = model.to(device)
 
@@ -376,7 +392,7 @@ def main():
     # 5. Gate Interpretability Analysis
     print("\nExtracting learned gate patterns from final ToxGraph checkpoint...")
     tox_model = get_model("toxgraph", num_node_features=num_node_features, num_tasks=num_tasks, hidden_dim=128, dropout=0.3)
-    ckpt = torch.load("checkpoints/toxgraph_best.pt", map_location=device, weights_only=False)
+    ckpt = torch.load(os.path.join(args.checkpoint_dir, "toxgraph_best.pt"), map_location=device, weights_only=True)
     tox_model.load_state_dict(ckpt["model_state_dict"])
     tox_model = tox_model.to(device)
     gate_activations = extract_toxgraph_gates(tox_model, test_loader, device, task_names)
@@ -388,7 +404,7 @@ def main():
     print(f"  Top 5 latent dimensions with highest cross-task gate variance: {top_divergent_dims}")
 
     # 6. Save Machine-Readable Results in results/final/
-    os.makedirs("results/final", exist_ok=True)
+    os.makedirs(final_dir, exist_ok=False)
 
     # Clean test results for JSON (strip raw numpy arrays)
     json_summary = {}
@@ -414,9 +430,9 @@ def main():
         "mean_gate_activation_range": [float(mean_gates.min()), float(mean_gates.max())],
     }
 
-    with open("results/final/test_evaluation_summary.json", "w") as f:
+    with open(os.path.join(final_dir, "test_evaluation_summary.json"), "w") as f:
         json.dump(json_summary, f, indent=2)
-    print("  Saved results/final/test_evaluation_summary.json")
+    print(f"  Saved {final_dir}/test_evaluation_summary.json")
 
     # CSV Summary Table
     csv_rows = []
@@ -428,12 +444,12 @@ def main():
             **{f"test_auc_{t}": test_results[m]["auc_results"]["per_task"][t] for t in task_names}
         })
     df_results = pd.DataFrame(csv_rows)
-    df_results.to_csv("results/final/test_model_comparison.csv", index=False)
-    print("  Saved results/final/test_model_comparison.csv")
+    df_results.to_csv(os.path.join(final_dir, "test_model_comparison.csv"), index=False)
+    print(f"  Saved {final_dir}/test_model_comparison.csv")
 
     # 7. Generate Figures
-    print("\nGenerating final figures under results/figures/...")
-    generate_figures(test_results, task_stats, bootstrap_res, gate_activations, output_dir="results/figures")
+    print(f"\nGenerating reproduction figures under {figure_dir}/...")
+    generate_figures(test_results, task_stats, bootstrap_res, gate_activations, output_dir=figure_dir, history_dir=args.history_dir)
 
     print("\n" + "=" * 70)
     print("PHASE 5 COMPLETE: ALL RESULTS AND FIGURES GENERATED")

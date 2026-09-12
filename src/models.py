@@ -1,11 +1,8 @@
 """
 models.py — GNN model definitions for Tox21 multi-task toxicity prediction.
 
-Currently implements:
-  - GCN: 2-layer Graph Convolutional Network (baseline)
-
-Designed so future models (GraphSAGE, GAT, ToxGraph) can be added and
-selected via the same interface.
+Implements GCN, GraphSAGE, GAT, and Full/Lite/Bottleneck ToxGraph.
+All frozen models use atom features and connectivity, not edge attributes.
 """
 
 import torch
